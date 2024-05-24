@@ -1,51 +1,59 @@
-const express = require('express');
-const nodemailer = require('nodemailer');
-
+const express = require("express");
+const nodemailer = require("nodemailer");
+const cors = require("cors");
 const app = express();
-const PORT = process.env.PORT || 5000;
+const port = 5000;
 
-const cors = require('cors');
-const corsOptions = {
-    origin: 'https://electronic-health-applic-2ff8e.web.app',
-    methods: ['GET', 'POST'],
-    credentials: true, // Enable credentials (cookies, authorization headers) cross-origin
-  };
-
-app.use(express.json());
-
-app.use(cors(corsOptions));
-app.get('/', (req, res) => {
-    res.send('Hello World!');
+app.use(cors());
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ limit: "25mb" }));
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  next();
 });
 
-app.post('/send-email', async (req, res) => {
-    console.log("hey hello")
-    const { to, subject, text } = req.body;
+var myemail = process.env.SENDER_EMAIL;
+var mypassword = process.env.APPLICATION_PASSWORD;
 
-    try {
-        const transporter = nodemailer.createTransport({
-            service: 'Gmail',
-            auth: {
-                user: 'healthhub75@gmail.com', // Your Gmail email address
-                pass: 'mgco socz tfox yymm' // Your Gmail password
-            }
-        });
+function sendEmail({ recipient_email, subject, html }) {
+  return new Promise((resolve, reject) => {
+    var transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "healthhub75@gmail.com",
+        pass: "mgco socz tfox yymm",
+      },
+    });
 
-        const mailOptions = {
-            from: 'healthhub75@gmail.com',
-            to,
-            subject,
-            text
-        };
+    const mail_configs = {
+      from: "healthhub75@gmail.com",
+      to: recipient_email,
+      subject: subject,
+      html: html,
+    };
+    transporter.sendMail(mail_configs, function (error, info) {
+      if (error) {
+        console.log(error);
+        return reject({ message: `An error has occurred` });
+      }
+      return resolve({ message: "Email sent successfully" });
+    });
+  });
+}
 
-        await transporter.sendMail(mailOptions);
-        res.status(200).send('Email sent successfully');
-    } catch (error) {
-        console.error('Error sending email:', error);
-        res.status(500).send('Internal Server Error');
-    }
+app.get("/", (req, res) => {
+  sendEmail()
+    .then((response) => res.send(response.message))
+    .catch((error) => res.status(500).send(error.message));
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.post("/send-email", (req, res) => {
+  console.log("Received email request", req.body);
+  sendEmail(req.body)
+    .then((response) => res.send(response.message))
+    .catch((error) => res.status(500).send(error.message));
+});
+
+app.listen(port, () => {
+  console.log(`Server is listening at http://localhost:${port}`);
 });
