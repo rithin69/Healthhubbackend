@@ -31,6 +31,7 @@ function sendEmail({ recipient_email, subject, html }) {
       subject: subject,
       html: html,
     };
+
     transporter.sendMail(mail_configs, function (error, info) {
       if (error) {
         console.log(error);
@@ -42,13 +43,28 @@ function sendEmail({ recipient_email, subject, html }) {
 }
 
 app.get("/", (req, res) => {
-  sendEmail()
+  // Provide default values or remove this route if not needed
+  const defaultEmailParams = {
+    recipient_email: "example@example.com",
+    subject: "Test Email",
+    html: "<h1>This is a test email</h1>",
+  };
+
+  sendEmail(defaultEmailParams)
     .then((response) => res.send(response.message))
     .catch((error) => res.status(500).send(error.message));
 });
 
 app.post("/send-email", (req, res) => {
   console.log("Received email request", req.body);
+
+  const { recipient_email, subject, html } = req.body;
+
+  // Check if the required parameters are provided
+  if (!recipient_email || !subject || !html) {
+    return res.status(400).send("Missing required email parameters");
+  }
+
   sendEmail(req.body)
     .then((response) => res.send(response.message))
     .catch((error) => res.status(500).send(error.message));
